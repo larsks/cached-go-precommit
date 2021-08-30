@@ -3,20 +3,20 @@ description: Run basic linters for my go projects
 inputs:
   golangci-lint-version:
     description: Version of golangci-lint to install
-    default: 1.42.0
+    default: '1.42.0'
   go-version:
     description: Version of Go to use
     default: '^1.16'
   python-version:
     description: Version of Python to use
     default: '^3.9'
+  precommit-version:
+    description: Version of pre-commit to use
+    default: '2.14.1'
 
 runs:
   using: composite
   steps:
-    - name: Check out code
-      uses: actions/checkout@v2
-
     - name: Set up python
       uses: actions/setup-python@v2
       with:
@@ -27,10 +27,31 @@ runs:
       with:
         go-version: ${{ inputs.go-version }}
 
+    - name: Set go cache paths
+      id: go-cache
+      shell: bash
+      run: |
+        echo "::set-output name=go-build::$(go env GOCACHE)"
+        echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+
+    - name: Configure caching for pre-commit
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pre-commit
+        key: precommit-v1-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+    - name: Configure caching for Go
+      uses: actions/cache@v2
+      with:
+        path: |
+          ${{ steps.go-cache.outputs.go-build }}
+          ${{ steps.go-cache.outputs.go-mod }}
+        key: go-v1-${{ runner.os }}-${{ hashFiles('go.sum') }}
+
     - name: Install pre-commit
       shell: bash
       run: |
-        pip install pre-commit
+        pip install "pre-commit==${{ inputs.precommit-version }}"
 
     - name: Install golangci-lint
       shell: bash
