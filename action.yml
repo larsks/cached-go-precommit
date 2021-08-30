@@ -1,0 +1,46 @@
+name: golint
+description: Run basic linters for my go projects
+inputs:
+  golangci-lint-version:
+    description: Version of golangci-lint to install
+    default: 1.42.0
+  go-version:
+    description: Version of Go to use
+    default: '^1.16'
+  python-version:
+    description: Version of Python to use
+    default: '^3.9'
+
+runs:
+  using: composite
+  steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Set up go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ inputs.go-version }}
+
+    - name: Install pre-commit
+      shell: bash
+      run: |
+        pip install pre-commit
+
+    - name: Install golangci-lint
+      shell: bash
+      run: |
+        mkdir -p ~/.cache/bin
+        curl -sfL -o golangci-lint.tar.gz https://github.com/golangci/golangci-lint/releases/download/v${{ inputs.golangci-lint-version }}/golangci-lint-${{ inputs.golangci-lint-version }}-linux-amd64.tar.gz
+        tar -C ~/.cache/bin -xf golangci-lint.tar.gz --strip-components 1 --wildcards '*/golangci-lint'
+
+    - name: Run linters
+      shell: bash
+      run: |
+        export PATH=$HOME/.cache/bin:$PATH
+        pre-commit run --all-files
